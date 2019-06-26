@@ -1,0 +1,7 @@
+[u192.168.7.9] twonode1
+[u192.168.7.11] singlenode3
+[u192.168.7.33] testnode2
+[u192.168.7.99] twonode2
+[u192.168.7.32, u172.17.0.1] testnode1
+[u192.168.7.12] singlenode2
+[u192.168.7.13] singlenode

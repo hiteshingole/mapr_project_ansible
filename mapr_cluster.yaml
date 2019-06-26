@@ -1,0 +1,190 @@
+-
+  name: install the packages
+  hosts: all_nodes
+  vars:
+    files:
+      - /root/mapr_project/files/eco_system.repo
+      - /root/mapr_project/files/mapr_core.repo
+    packages:
+        - mapr-core
+        - mapr-fileserver
+        - mapr-nodemanager
+  tasks:
+    - name: copy the repo files
+      copy: src='{{ item }}' dest=/etc/yum.repos.d/
+      with_items: "{{ files }}"
+    # - name : clean yum cache
+    #   command: rm -rf /var/cache/yum
+    - name: install the packages
+      yum:
+        name: '{{ item }}'
+        state: present
+      with_items: "{{ packages }}"
+
+
+
+##############################
+
+-
+  name: install control nodes
+  hosts: controlnodes
+  vars:
+    control_packages:
+      - mapr-cldb
+      - mapr-zookeeper
+      - mapr-resourcemanager
+  tasks:
+    - name: install packages
+      yum:
+        name: '{{ item }}'
+        state: present
+      with_items: "{{ control_packages }}"
+
+##############################
+
+-
+  name: genrate the disk.txt
+  hosts: all_nodes
+  vars_files:
+       - /root/mapr_project/files/disks.yaml
+  tasks:
+    - name: Checking the existance
+      stat:
+        path: "{{ item }}"
+      with_items: "{{ disks }}"
+      register: checkid
+
+
+    - name: add the disk to file if it exists
+      lineinfile:
+        path: /tmp/disks.txt
+        create: yes
+        line: '{{ item.item }}'
+      with_items: "{{ checkid.results }}"
+      when: item.stat.exists
+
+##############################
+
+-
+  name: Remove the old configure
+  hosts: localhost
+  tasks:
+    -
+      name: remove the files
+      file:
+        path: /tmp/controlnodes.txt
+        state: absent
+
+##############################
+
+-
+  name: Configure the cluster
+  hosts: controlnodes
+  tasks:
+    - name: get ip
+      local_action: shell echo "{{ ansible_default_ipv4.address }}" >> /tmp/controlnodes.txt
+    - name: genrate the configure.sh
+      local_action: shell dos2unix /root/mapr_project/files/gencon.sh; sh /root/mapr_project/files/gencon.sh
+
+
+##############################
+
+- name: execute the configure.sh on one cldb node
+  hosts: cldb1
+  vars_files:
+     - /root/mapr_project/files/disks.yaml
+  tasks:
+    - name: remove the config files first
+      file:
+        path: /opt/mapr/conf/{{ item }}
+        state: absent
+      with_items: '{{ config_files }}'
+
+    - name: Run the configure.sh with genkeys on cldb1
+      script: /tmp/configure_command_gen.sh
+      register: output
+
+    - debug:
+        msg: '{{ output.stdout }}'
+
+    - name: genrate the configure.sh
+      local_action: shell /bin/mkdir -p /tmp/tmpcirts
+
+    - name: get all the cirts
+      fetch:
+        src: /opt/mapr/conf/"{{ item }}"
+        dest: /tmp/tmpcirts/
+        validate_checksum: yes
+        flat: yes
+      with_items: "{{ config_files }}"
+##############################
+
+-
+  name: execute the configure.sh on one cldb node
+  hosts: all_nodes
+  vars_files:
+     - /root/mapr_project/files/disks.yaml
+  tasks:
+    - name: copy the configeration on all the nodes
+      copy:
+        src: /tmp/tmpcirts/{{ item }}
+        dest: /opt/mapr/conf/
+        force: yes
+      with_items: '{{ config_files }}'
+
+
+    - name: run configure.sh on all the ndoes.
+      script: /tmp/configure_command.sh
+      register: output
+    - debug:
+        msg: '{{ output.stdout }}'
+
+    - name: check the existance of disktab
+      stat:
+        path: /opt/mapr/conf/disktab
+      register: disktab
+
+    - name: add the disk
+      command: /opt/mapr/server/disksetup -F /tmp/disks.txt
+      when: disktab.stat.exists == False
+
+###########################
+
+-
+  name: execute the configure.sh on one cldb node
+  hosts: controlnodes
+  tasks:
+    - name: Restart the zookeeper service
+      service:
+        name: mapr-zookeeper
+        state: restarted
+
+
+    - name: Check the status of zookeeper
+      command: /opt/mapr/initscripts/zookeeper qstatus
+      register: output_serivce
+
+    - name: Check the zookeeper service
+      meta: end_play
+      when: output_serivce.stdout.find('leader') == -1  or output_serivce.stdout.find('follower') == -1
+
+##############################
+
+-
+  name: execute the configure.sh on one cldb node
+  hosts: datanodes
+  tasks:
+    - name: Restart the zookeeper service
+      service:
+        name: mapr-warden
+        state: restarted
+###############################
+-
+  name: remove the /tmp/tmpcirts
+  hosts: localhost
+  tasks:
+    - name: rmdir /tmp/tmpcirts
+      file:
+        path: /tmp/tmpcirts
+        state: absent
+        force: yes

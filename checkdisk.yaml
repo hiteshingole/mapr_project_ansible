@@ -1,0 +1,15 @@
+---
+  tasks:
+    - name: Checking the existance
+      stat:
+        path: "{{ item }}"
+      with_items: "{{ disks }}"
+      register: checkid
+    - name: add the disk to file if it exists
+      lineinfile:
+        path: /tmp/disks.txt
+        create: yes
+        line: '{{ item.item }}'
+      with_items: "{{ checkid.results }}"
+      when: item.stat.exists
+    

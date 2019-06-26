@@ -1,0 +1,28 @@
+- hosts:  localhost
+  gather_facts: false
+  vars:
+    file_vars:
+      - {id: /dev/sdb, name: foo}
+      - {id: /dev/sdc, name: bar}
+  tasks:
+    - name: Checking existing file id
+      stat:
+        path: ./files/{{ item.id }}.conf
+      with_items: "{{ file_vars }}"
+      register: check_file_id
+
+    - name: Checking existing file name
+      stat:
+        path: ./files/{{ item.name }}.conf
+      with_items: "{{ file_vars }}"
+      register: check_file_name
+
+    - debug:
+        msg: 'file id {{item.item.id}} (name {{item.item.name}}) exists'
+      with_items: "{{ check_file_id.results }}"
+      when: item.stat.exists
+
+    - debug:
+        msg: 'file name {{item.item.name}} (id {{item.item.id}}) exists'
+      with_items: "{{ check_file_name.results }}"
+      when: item.stat.exists

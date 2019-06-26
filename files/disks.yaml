@@ -1,0 +1,14 @@
+---
+ disks:
+    - /dev/sdb
+    - /dev/sdc
+    - /dev/sdd
+    - /dev/sde
+    - /dev/sdf
+ config_files:
+    - cldb.key
+    - maprserverticket
+    - ssl_keystore
+    - ssl_truststore
+    - ssl_truststore.p12
+    - ssl_truststore.pem

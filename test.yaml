@@ -1,0 +1,62 @@
+#-
+#  name: ping test yaml file
+#  hosts: all
+#  tasks:
+    #- name: ping test
+    #  ping:
+-
+  name: configure the cluster
+  hosts: localhost
+  # tasks:
+  #   - name: remove the files
+  #     file:
+  #       path: /tmp/controlnodes.txt
+  #       state: absent
+
+# -
+#   name: configure the cluster
+#   hosts: controlnodes
+  vars_files:
+    - /root/mapr_project/files/disks.yaml
+
+
+  tasks:
+    # - name: Checking the existance
+    #   stat:
+    #     path: "{{ item }}"
+    #   with_items: "{{ disks }}"
+    #   register: checkid
+    #
+    # - name: add the disk to file if it exists
+    #   lineinfile:
+    #     path: /tmp/disks.txt
+    #     create: yes
+    #     line: '{{ item.item }}'
+    #   with_items: "{{ checkid.results }}"
+    #   when: item.stat.exists
+      - name: rmdir /tmp/tmpcirts
+        file:
+          path: /tmp/tmpcirts
+          state: absent
+          force: yes
+
+
+#    -
+#       name: add the disks in disktab
+#       lineinfile:
+#          path: /tmp/disks.txt
+#          line: '{{ item }}'
+#       with_items: "{{ disks }}"
+   # - name: get ip
+   #   local_action: shell echo "{{ ansible_default_ipv4.address }}" >> /tmp/controlnodes.txt
+   # - name: genrate the configure.sh
+   #   local_action: shell sh /root/mapr_project/files/gencon.sh
+   # - name: genrate the configure.sh
+   #   local_action: shell dos2unix /root/mapr_project/files/gencon.sh
+   # - name: genrate the configure.sh
+   #   local_action: file /tmp/devops
+
+
+   # - name: generate configure.sh command
+   #   local_action: script /root/mapr_project/files/gencon.sh /tmp/controlnodes.txt
+   #
